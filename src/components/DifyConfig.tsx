@@ -40,23 +40,7 @@ const DifyConfig: React.FC<DifyConfigProps> = ({ apps, onAppsChange, onClose }) 
   return (
     <Card title="Dify 应用配置">
       <Space direction="vertical" style={{ width: '100%' }} size="large">
-        {apps.map(app => (
-          <Card key={app.id} size="small">
-            <Space direction="vertical" style={{ width: '100%' }}>
-              <div>应用名称：{app.name}</div>
-              <div>API Token：{app.token}</div>
-              <div>API Endpoint：{app.endpoint}</div>
-              <Button 
-                type="text" 
-                danger 
-                icon={<DeleteOutlined />}
-                onClick={() => handleDelete(app.id)}
-              >
-                删除
-              </Button>
-            </Space>
-          </Card>
-        ))}
+        
         <Form form={form} layout="vertical">
           <Form.Item
             name="name"
@@ -83,6 +67,24 @@ const DifyConfig: React.FC<DifyConfigProps> = ({ apps, onAppsChange, onClose }) 
             添加应用
           </Button>
         </Form>
+
+        {apps.map(app => (
+          <Card key={app.id} size="small">
+            <Space direction="vertical" style={{ width: '100%' }}>
+              <div>应用名称：{app.name}</div>
+              {/* <div>API Token：{app.token}</div> */}
+              <div>API Endpoint：{app.endpoint}</div>
+              <Button 
+                type="text" 
+                danger 
+                icon={<DeleteOutlined />}
+                onClick={() => handleDelete(app.id)}
+              >
+                删除
+              </Button>
+            </Space>
+          </Card>
+        ))}
       </Space>
     </Card>
   );

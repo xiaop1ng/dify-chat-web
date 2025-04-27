@@ -34,7 +34,7 @@ import { createStyles } from 'antd-style';
 import dayjs from 'dayjs';
 import React, { useEffect, useRef, useState } from 'react';
 import DifyConfig, { DifyApp } from './components/DifyConfig';
-import { DifyService, DifyStreamResponse } from './services/dify';
+import { DifyService, DifyStreamResponse, DifyAppInfo } from './services/dify';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { RcFile } from 'antd/es/upload/interface';
@@ -370,6 +370,7 @@ const Independent: React.FC = () => {
     const savedCurrentApp = localStorage.getItem('currentApp');
     return savedCurrentApp ? JSON.parse(savedCurrentApp) : null;
   });
+  const [appParameters, setAppParameters] = useState<DifyAppInfo | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [showReference, setShowReference] = useState<{
@@ -390,10 +391,39 @@ const Independent: React.FC = () => {
   };
 
   // 更新当前应用时同时保存配置
-  const handleCurrentAppChange = (app: DifyApp | null) => {
+  const handleCurrentAppChange = async (app: DifyApp | null) => {
     setCurrentApp(app);
     saveConfig(difyApps, app);
+    
+    if (app) {
+      try {
+        const difyService = new DifyService(app.endpoint, app.token);
+        const parameters = await difyService.getAppParameters();
+        setAppParameters(parameters);
+      } catch (error) {
+        message.error('获取应用参数失败：' + (error as Error).message);
+      }
+    } else {
+      setAppParameters(null);
+    }
   };
+
+  // 在首次加载时获取当前应用的参数
+  useEffect(() => {
+    const fetchInitialAppParameters = async () => {
+      if (currentApp) {
+        try {
+          const difyService = new DifyService(currentApp.endpoint, currentApp.token);
+          const parameters = await difyService.getAppParameters();
+          setAppParameters(parameters);
+        } catch (error) {
+          message.error('获取应用参数失败：' + (error as Error).message);
+        }
+      }
+    };
+
+    fetchInitialAppParameters();
+  }, []); // 只在组件首次加载时执行一次
 
   // ==================== Event ====================
   const onSubmit = async (val: string) => {
@@ -639,8 +669,6 @@ const Independent: React.FC = () => {
             classNames: {
               content: index === messages.length - 1 && loading ? styles.loadingMessage : '',
             },
-            typing: index === messages.length - 1 && loading ? { step: 5, interval: 20, suffix: <>💗</> } : false,
-            loading: index === messages.length - 1 && loading,
           }))}
           style={{ height: '100%' }}
           roles={{
@@ -654,7 +682,6 @@ const Independent: React.FC = () => {
                   <Button type="text" size="small" icon={<DislikeOutlined />} />
                 </div>
               ),
-              loadingRender: () => <Spin size="small" />,
             },
             user: { placement: 'end' },
           }}
@@ -664,8 +691,8 @@ const Independent: React.FC = () => {
           <Welcome
             variant="borderless"
             icon="https://mdn.alipayobjects.com/huamei_iwk9zp/afts/img/A*s5sNRo5LjfQAAAAAAAAAAAAADgCCAQ/fmt.webp"
-            title="欢迎使用 Dify AI 助手"
-            description="基于 Dify API 的智能对话助手，为您提供更好的智能体验~"
+            title={currentApp?.name || "欢迎使用 Dify AI 助手"}
+            description={appParameters?.opening_statement || "基于 Dify API 的智能对话助手，为您提供更好的智能体验~"}
             extra={
               <Space>
                 <Button icon={<ShareAltOutlined />} />

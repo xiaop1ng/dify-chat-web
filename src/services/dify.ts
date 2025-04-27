@@ -52,6 +52,44 @@ interface StreamEvent {
   };
 }
 
+export interface DifyAppInfo {
+  opening_statement: string;
+  suggested_questions: string[];
+  suggested_questions_after_answer: {
+    enabled: boolean;
+  };
+  speech_to_text: {
+    enabled: boolean;
+  };
+  retriever_resource: {
+    enabled: boolean;
+  };
+  annotation_reply: {
+    enabled: boolean;
+  };
+  user_input_form: Array<{
+    type: 'text-input' | 'paragraph' | 'select';
+    label: string;
+    variable: string;
+    required: boolean;
+    default?: string;
+    options?: string[];
+  }>;
+  file_upload: {
+    image: {
+      enabled: boolean;
+      number_limits: number;
+      transfer_methods: string[];
+    };
+  };
+  system_parameters: {
+    file_size_limit: number;
+    image_file_size_limit: number;
+    audio_file_size_limit: number;
+    video_file_size_limit: number;
+  };
+}
+
 export class DifyService {
   private baseURL: string;
   private token: string;
@@ -120,7 +158,7 @@ export class DifyService {
     const requestData: DifyRequest = {
       inputs: {},
       query: message,
-      response_mode:  'streaming', // 'blocking' | 'streaming'
+      response_mode: 'streaming',
       conversation_id: this.conversationId,
       user: 'user_' + Date.now(),
       files: [],
@@ -158,33 +196,6 @@ export class DifyService {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      // 检查响应类型
-      const contentType = response.headers.get('content-type');
-      if (contentType?.includes('application/json')) {
-        // 处理 blocking 模式的响应
-        const data = await response.json();
-        if (data.answer) {
-          // 直接调用 onMessage 一次，传入完整的 answer
-          onMessage(data.answer);
-          if (data.conversation_id) {
-            this.conversationId = data.conversation_id;
-          }
-          // 调用 onComplete 时传入完整的响应数据
-          onComplete?.({
-            event: 'message_end',
-            answer: data.answer,
-            conversation_id: data.conversation_id,
-            created_at: data.created_at,
-            id: data.id,
-            inputs: data.inputs,
-            message_id: data.message_id,
-            metadata: data.metadata
-          });
-        }
-        return;
-      }
-
-      // 处理 streaming 模式的响应
       const reader = response.body?.getReader();
       if (!reader) {
         throw new Error('No reader available');
@@ -242,5 +253,33 @@ export class DifyService {
     } catch (error) {
       onError(error);
     }
+  }
+
+  async getAppInfo(): Promise<DifyAppInfo> {
+    const response = await fetch(`${this.baseURL}/app/info`, {
+      headers: {
+        'Authorization': `Bearer ${this.token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('获取应用信息失败');
+    }
+
+    return response.json();
+  }
+
+  async getAppParameters(): Promise<DifyAppInfo> {
+    const response = await fetch(`${this.baseURL}/parameters`, {
+      headers: {
+        'Authorization': `Bearer ${this.token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('获取应用参数失败');
+    }
+
+    return response.json();
   }
 } 
